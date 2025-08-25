@@ -52,6 +52,14 @@ export default function Home() {
     setIsClient(true);
   }, []);
 
+  // 动态水印
+  const [watermark, setWatermark] = useState("水果名片");
+  const watermarkDataUrl = useMemo(() => {
+    const text = encodeURIComponent(watermark || "水果名片");
+    const svg = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='130' viewBox='0 0 300 130'%3E%3Ctext x='0' y='40' font-family='Arial' font-size='32' fill='%232b6cb0' fill-opacity='1' transform='rotate(-30 0 0)'%3E${text}%3C/text%3E%3C/svg%3E`;
+    return svg;
+  }, [watermark]);
+
   // 列宽可拖拽
   const [columnWidths, setColumnWidths] = useState<number[]>([]);
   useEffect(() => {
@@ -135,6 +143,12 @@ export default function Home() {
             />
             <input
               className="w-full h-11 px-3 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              value={watermark}
+              onChange={(e) => setWatermark(e.target.value)}
+              placeholder="水印文字（默认：水果名片）"
+            />
+            <input
+              className="w-full h-11 px-3 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="备注支持 Markdown（可空）"
@@ -150,8 +164,8 @@ export default function Home() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 relative overflow-hidden" ref={containerRef} style={{ resize: "both" }}>
-          <div className="watermark-overlay" aria-hidden="true"></div>
-          <div className="relative z-10">
+          <div className="watermark-overlay pointer-events-none" aria-hidden="true" style={{ backgroundImage: `url(${JSON.stringify(watermarkDataUrl)})` }} />
+          <div className="relative z-30">
 
             <div className="relative">
               {title && (
