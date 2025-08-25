@@ -34,6 +34,7 @@ body {
   background: #5b8bd8;
   color: #ffffff;
   font-weight: 700;
+  position: relative;
 }
 .custom-table tbody tr:nth-child(even) td {
   background: #f7fafc;

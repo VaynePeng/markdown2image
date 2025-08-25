@@ -52,6 +52,47 @@ export default function Home() {
     setIsClient(true);
   }, []);
 
+  // 列宽可拖拽
+  const [columnWidths, setColumnWidths] = useState<number[]>([]);
+  useEffect(() => {
+    if (!tableData) return;
+    setColumnWidths((prev) => {
+      if (prev.length === tableData.headers.length) return prev;
+      return new Array(tableData.headers.length).fill(160);
+    });
+  }, [tableData]);
+
+  const startXRef = useRef(0);
+  const startWidthsRef = useRef<number[]>([]);
+  const resizingColRef = useRef<number | null>(null);
+
+  const onMouseMove = (e: MouseEvent) => {
+    const idx = resizingColRef.current;
+    if (idx == null) return;
+    const delta = e.clientX - startXRef.current;
+    setColumnWidths(() => {
+      const base = startWidthsRef.current;
+      const copy = [...base];
+      copy[idx] = Math.max(80, (base[idx] ?? 160) + delta);
+      return copy;
+    });
+  };
+
+  const onMouseUp = () => {
+    window.removeEventListener("mousemove", onMouseMove);
+    window.removeEventListener("mouseup", onMouseUp);
+    resizingColRef.current = null;
+  };
+
+  const onResizeMouseDown = (index: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    startXRef.current = e.clientX;
+    startWidthsRef.current = [...columnWidths];
+    resizingColRef.current = index;
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
   const exportAsImage = async () => {
     if (!containerRef.current) return;
     const node = containerRef.current;
@@ -108,7 +149,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 relative overflow-hidden" ref={containerRef}>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 relative overflow-hidden" ref={containerRef} style={{ resize: "both" }}>
           <div className="watermark-overlay" aria-hidden="true"></div>
           <div className="relative z-10">
 
@@ -120,11 +161,22 @@ export default function Home() {
               {tableData ? (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse custom-table">
+                    {columnWidths.length === tableData.headers.length && (
+                      <colgroup>
+                        {tableData.headers.map((_, i) => (
+                          <col key={i} style={{ width: columnWidths[i] ? `${columnWidths[i]}px` : undefined }} />
+                        ))}
+                      </colgroup>
+                    )}
                     <thead>
                       <tr>
                         {tableData.headers.map((h, i) => (
-                          <th key={i} className="text-center px-3 py-2">
+                          <th key={i} className="text-center px-3 py-2 relative select-none">
                             {h}
+                            <span
+                              className="absolute top-0 right-0 h-full w-2 cursor-col-resize"
+                              onMouseDown={(e) => onResizeMouseDown(i, e)}
+                            />
                           </th>
                         ))}
                       </tr>
