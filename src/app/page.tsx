@@ -1,103 +1,162 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toPng } from "html-to-image";
+import DOMPurify from "dompurify";
+import { marked } from "marked";
+
+type TableData = {
+  headers: string[];
+  rows: string[][];
+};
+
+function parseMarkdownTable(markdown: string): TableData | null {
+  const lines = markdown
+    .trim()
+    .split(/\r?\n/)
+    .filter((l) => l.trim().length > 0);
+  if (lines.length < 2) return null;
+  const headerLine = lines[0];
+  const delimiterLine = lines[1];
+  if (!/\|/.test(headerLine) || !/-{3,}/.test(delimiterLine)) return null;
+
+  const normalize = (line: string) =>
+    line
+      .replace(/^\s*\|/, "")
+      .replace(/\|\s*$/, "")
+      .split("|")
+      .map((s) => s.trim());
+
+  const headers = normalize(headerLine);
+  const rows = lines
+    .slice(2)
+    .map(normalize)
+    .filter((cols) => cols.length > 1);
+
+  return { headers, rows };
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [markdown, setMarkdown] = useState(
+    "| 品类 | 水果名称 | 价格 | 规格 | 性价比（20字内） | 日期 |\n| --- | --- | --- | --- | --- | --- |\n| 葡萄 | 阳光玫瑰（精品） | 15-18 元/斤 | 无 | 价稳，脆甜多汁，适合批量采购 | 12月19日 |\n| 葡萄 | 阳光玫瑰（普通） | 10-12 元/斤 | 无 | 价适中，清甜，流通性强，损耗低 | 12月19日 |\n| 芒果 | 桂七芒果（尾期） | 8-10 元/斤 | 无 | 价略高，香气浓，按需少量采购 | 12月19日 |\n| 芒果 | 小台农芒果 | 5-6 元/斤 | 无 | 价稳，甜糯，耐存储，批量优选 | 12月19日 |\n| 柑橘类 | 沃柑（精品） | 6-7 元/斤 | 无 | 价稳，酸甜适中，流通快，损耗少 | 12月19日 |\n| 柑橘类 | 砂糖橘 | 3-4 元/斤 | 按件（10斤净果） | 价低，清甜，适合批量囤货 | 12月19日 |\n| 柑橘类 | 粑粑柑 | 8-9 元/斤 | 无 | 价略高，果肉饱满，品质优 | 12月19日 |\n| 橙类 | 赣南脐橙 | 5-6 元/斤 | 无 | 价稳，多汁，耐存储，批量可行 | 12月19日 |"
+  );
+  const [title, setTitle] = useState("");
+  const [note, setNote] = useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const tableData = useMemo(() => parseMarkdownTable(markdown), [markdown]);
+
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const exportAsImage = async () => {
+    if (!containerRef.current) return;
+    const node = containerRef.current;
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+
+    const dataUrl = await toPng(node, {
+      pixelRatio: 2,
+      cacheBust: true,
+      backgroundColor: "#ffffff",
+    });
+    const link = document.createElement("a");
+    link.download = `${title || "表格"}.png`;
+    link.href = dataUrl;
+    link.click();
+  };
+
+  const sanitizedNoteHtml = useMemo(() => {
+    if (!isClient || !note) return "";
+    const raw = marked.parseInline(note) as string;
+    return DOMPurify.sanitize(raw);
+  }, [note, isClient]);
+
+  return (
+    <div className="min-h-screen p-6 sm:p-10 bg-[#f5f7fb]">
+      <div className="mx-auto max-w-6xl grid gap-6">
+        <h1 className="text-2xl font-bold">Markdown 转表格并导出图片</h1>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <textarea
+            className="w-full h-72 p-4 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            value={markdown}
+            onChange={(e) => setMarkdown(e.target.value)}
+            placeholder="粘贴 Markdown 表格..."
+          />
+          <div className="grid gap-3 content-start">
+            <input
+              className="w-full h-11 px-3 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="图片标题（可空）"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <input
+              className="w-full h-11 px-3 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="备注支持 Markdown（可空）"
+            />
+            <button
+              className="h-11 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+              onClick={exportAsImage}
+              disabled={!tableData}
+            >
+              下载为图片（含水印）
+            </button>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 relative overflow-hidden" ref={containerRef}>
+          <div className="watermark-overlay" aria-hidden="true"></div>
+          <div className="relative z-10">
+
+            <div className="relative">
+              {title && (
+                <div className="text-center text-xl font-bold mb-3">{title}</div>
+              )}
+
+              {tableData ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse custom-table">
+                    <thead>
+                      <tr>
+                        {tableData.headers.map((h, i) => (
+                          <th key={i} className="text-center px-3 py-2">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tableData.rows.map((row, r) => (
+                        <tr key={r}>
+                          {row.map((c, ci) => (
+                            <td key={ci} className="px-3 py-3 align-top">
+                              {c}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-gray-500">请输入有效的 Markdown 表格</div>
+              )}
+
+              {isClient && note && (
+                <div
+                  className="text-sm text-gray-600 mt-4"
+                  dangerouslySetInnerHTML={{ __html: sanitizedNoteHtml }}
+                />
+              )}
+
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
