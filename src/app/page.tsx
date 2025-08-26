@@ -1,127 +1,153 @@
-"use client";
+'use client'
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { toPng } from "html-to-image";
-import DOMPurify from "dompurify";
-import { marked } from "marked";
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { toPng } from 'html-to-image'
+import DOMPurify from 'dompurify'
+import { marked } from 'marked'
 
 type TableData = {
-  headers: string[];
-  rows: string[][];
-};
+  headers: string[]
+  rows: string[][]
+}
 
 function parseMarkdownTable(markdown: string): TableData | null {
   const lines = markdown
     .trim()
     .split(/\r?\n/)
-    .filter((l) => l.trim().length > 0);
-  if (lines.length < 2) return null;
-  const headerLine = lines[0];
-  const delimiterLine = lines[1];
-  if (!/\|/.test(headerLine) || !/-{3,}/.test(delimiterLine)) return null;
+    .filter((l) => l.trim().length > 0)
+  if (lines.length < 2) return null
+  const headerLine = lines[0]
+  const delimiterLine = lines[1]
+  if (!/\|/.test(headerLine) || !/-{3,}/.test(delimiterLine)) return null
 
   const normalize = (line: string) =>
     line
-      .replace(/^\s*\|/, "")
-      .replace(/\|\s*$/, "")
-      .split("|")
-      .map((s) => s.trim());
+      .replace(/^\s*\|/, '')
+      .replace(/\|\s*$/, '')
+      .split('|')
+      .map((s) => s.trim())
 
-  const headers = normalize(headerLine);
+  const headers = normalize(headerLine)
   const rows = lines
     .slice(2)
     .map(normalize)
-    .filter((cols) => cols.length > 1);
+    .filter((cols) => cols.length > 1)
 
-  return { headers, rows };
+  return { headers, rows }
 }
 
 export default function Home() {
   const [markdown, setMarkdown] = useState(
-    "| 品类 | 水果名称 | 价格 | 规格 | 性价比（20字内） | 日期 |\n| --- | --- | --- | --- | --- | --- |\n| 葡萄 | 阳光玫瑰（精品） | 15-18 元/斤 | 无 | 价稳，脆甜多汁，适合批量采购 | 12月19日 |\n| 葡萄 | 阳光玫瑰（普通） | 10-12 元/斤 | 无 | 价适中，清甜，流通性强，损耗低 | 12月19日 |\n| 芒果 | 桂七芒果（尾期） | 8-10 元/斤 | 无 | 价略高，香气浓，按需少量采购 | 12月19日 |\n| 芒果 | 小台农芒果 | 5-6 元/斤 | 无 | 价稳，甜糯，耐存储，批量优选 | 12月19日 |\n| 柑橘类 | 沃柑（精品） | 6-7 元/斤 | 无 | 价稳，酸甜适中，流通快，损耗少 | 12月19日 |\n| 柑橘类 | 砂糖橘 | 3-4 元/斤 | 按件（10斤净果） | 价低，清甜，适合批量囤货 | 12月19日 |\n| 柑橘类 | 粑粑柑 | 8-9 元/斤 | 无 | 价略高，果肉饱满，品质优 | 12月19日 |\n| 橙类 | 赣南脐橙 | 5-6 元/斤 | 无 | 价稳，多汁，耐存储，批量可行 | 12月19日 |"
-  );
-  const [title, setTitle] = useState("");
-  const [note, setNote] = useState("");
+    '| 品类 | 水果名称 | 价格 | 规格 | 性价比（20字内） | 日期 |\n| --- | --- | --- | --- | --- | --- |\n| 葡萄 | 阳光玫瑰（精品） | 15-18 元/斤 | 无 | 价稳，脆甜多汁，适合批量采购 | 12月19日 |\n| 葡萄 | 阳光玫瑰（普通） | 10-12 元/斤 | 无 | 价适中，清甜，流通性强，损耗低 | 12月19日 |\n| 芒果 | 桂七芒果（尾期） | 8-10 元/斤 | 无 | 价略高，香气浓，按需少量采购 | 12月19日 |\n| 芒果 | 小台农芒果 | 5-6 元/斤 | 无 | 价稳，甜糯，耐存储，批量优选 | 12月19日 |\n| 柑橘类 | 沃柑（精品） | 6-7 元/斤 | 无 | 价稳，酸甜适中，流通快，损耗少 | 12月19日 |\n| 柑橘类 | 砂糖橘 | 3-4 元/斤 | 按件（10斤净果） | 价低，清甜，适合批量囤货 | 12月19日 |\n| 柑橘类 | 粑粑柑 | 8-9 元/斤 | 无 | 价略高，果肉饱满，品质优 | 12月19日 |\n| 橙类 | 赣南脐橙 | 5-6 元/斤 | 无 | 价稳，多汁，耐存储，批量可行 | 12月19日 |'
+  )
+  const [title, setTitle] = useState('')
+  const [note, setNote] = useState('')
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  const tableData = useMemo(() => parseMarkdownTable(markdown), [markdown]);
+  const tableData = useMemo(() => parseMarkdownTable(markdown), [markdown])
 
-  const [isClient, setIsClient] = useState(false);
+  const [isClient, setIsClient] = useState(false)
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    setIsClient(true)
+  }, [])
 
   // 动态水印
-  const [watermark, setWatermark] = useState("水果名片");
-  const watermarkDataUrl = useMemo(() => {
-    const text = encodeURIComponent(watermark || "水果名片");
-    const svg = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='130' viewBox='0 0 300 130'%3E%3Ctext x='0' y='40' font-family='Arial' font-size='32' fill='%232b6cb0' fill-opacity='1' transform='rotate(-30 0 0)'%3E${text}%3C/text%3E%3C/svg%3E`;
-    return svg;
-  }, [watermark]);
+  const [watermark, setWatermark] = useState('水果名片')
+  const watermarkPattern = useMemo(() => {
+    const textRaw =
+      watermark && watermark.trim().length > 0 ? watermark : '水果名片'
+    const fontSize = 20
+    const fontFamily = 'Arial'
+    let textWidth = textRaw.length * fontSize * 0.65 // 近似兜底
+    if (typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.font = `${fontSize}px ${fontFamily}`
+        const metrics = ctx.measureText(textRaw)
+        textWidth = metrics.width
+      }
+    }
+    const textHeight = fontSize
+    const angleDeg = 30
+    const rad = (angleDeg * Math.PI) / 180
+    const padding = 80
+    const rotatedW = textWidth * Math.cos(rad) + textHeight * Math.sin(rad)
+    const rotatedH = textWidth * Math.sin(rad) + textHeight * Math.cos(rad)
+    const tileWidth = Math.ceil(rotatedW + padding)
+    const tileHeight = Math.ceil(rotatedH + padding)
+    const cx = tileWidth / 2
+    const cy = tileHeight / 2
+    const text = encodeURIComponent(textRaw)
+    const svg = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${tileWidth}' height='${tileHeight}' viewBox='0 0 ${tileWidth} ${tileHeight}'%3E%3Ctext x='${cx}' y='${cy}' text-anchor='middle' dominant-baseline='middle' font-family='${encodeURIComponent(
+      fontFamily
+    )}' font-size='${fontSize}' fill='%232b6cb0' fill-opacity='1' transform='rotate(-30 ${cx} ${cy})'%3E${text}%3C/text%3E%3C/svg%3E`
+    return { url: svg, width: tileWidth, height: tileHeight }
+  }, [watermark])
 
   // 列宽可拖拽
-  const [columnWidths, setColumnWidths] = useState<number[]>([]);
+  const [columnWidths, setColumnWidths] = useState<number[]>([])
   useEffect(() => {
-    if (!tableData) return;
+    if (!tableData) return
     setColumnWidths((prev) => {
-      if (prev.length === tableData.headers.length) return prev;
-      return new Array(tableData.headers.length).fill(160);
-    });
-  }, [tableData]);
+      if (prev.length === tableData.headers.length) return prev
+      return new Array(tableData.headers.length).fill(160)
+    })
+  }, [tableData])
 
-  const startXRef = useRef(0);
-  const startWidthsRef = useRef<number[]>([]);
-  const resizingColRef = useRef<number | null>(null);
+  const startXRef = useRef(0)
+  const startWidthsRef = useRef<number[]>([])
+  const resizingColRef = useRef<number | null>(null)
 
   const onMouseMove = (e: MouseEvent) => {
-    const idx = resizingColRef.current;
-    if (idx == null) return;
-    const delta = e.clientX - startXRef.current;
+    const idx = resizingColRef.current
+    if (idx == null) return
+    const delta = e.clientX - startXRef.current
     setColumnWidths(() => {
-      const base = startWidthsRef.current;
-      const copy = [...base];
-      copy[idx] = Math.max(80, (base[idx] ?? 160) + delta);
-      return copy;
-    });
-  };
+      const base = startWidthsRef.current
+      const copy = [...base]
+      copy[idx] = Math.max(80, (base[idx] ?? 160) + delta)
+      return copy
+    })
+  }
 
   const onMouseUp = () => {
-    window.removeEventListener("mousemove", onMouseMove);
-    window.removeEventListener("mouseup", onMouseUp);
-    resizingColRef.current = null;
-  };
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('mouseup', onMouseUp)
+    resizingColRef.current = null
+  }
 
   const onResizeMouseDown = (index: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    startXRef.current = e.clientX;
-    startWidthsRef.current = [...columnWidths];
-    resizingColRef.current = index;
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  };
+    e.preventDefault()
+    startXRef.current = e.clientX
+    startWidthsRef.current = [...columnWidths]
+    resizingColRef.current = index
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
 
   const exportAsImage = async () => {
-    if (!containerRef.current) return;
-    const node = containerRef.current;
-    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    if (!containerRef.current) return
+    const node = containerRef.current
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)))
 
     const dataUrl = await toPng(node, {
       pixelRatio: 2,
       cacheBust: true,
-      backgroundColor: "#ffffff",
-    });
-    const link = document.createElement("a");
-    link.download = `${title || "表格"}.png`;
-    link.href = dataUrl;
-    link.click();
-  };
+      backgroundColor: '#ffffff'
+    })
+    const link = document.createElement('a')
+    link.download = `${title || '表格'}.png`
+    link.href = dataUrl
+    link.click()
+  }
 
   const sanitizedNoteHtml = useMemo(() => {
-    if (!isClient || !note) return "";
-    const raw = marked.parseInline(note) as string;
-    return DOMPurify.sanitize(raw);
-  }, [note, isClient]);
+    if (!isClient || !note) return ''
+    const raw = marked.parseInline(note) as string
+    return DOMPurify.sanitize(raw)
+  }, [note, isClient])
 
   return (
     <div className="min-h-screen p-6 sm:p-10 bg-[#f5f7fb]">
@@ -163,13 +189,30 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 relative overflow-hidden" ref={containerRef} style={{ resize: "both" }}>
-          <div className="watermark-overlay pointer-events-none" aria-hidden="true" style={{ backgroundImage: `url(${JSON.stringify(watermarkDataUrl)})` }} />
+        <div
+          className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 relative overflow-hidden"
+          ref={containerRef}
+          style={{ resize: 'both' }}
+        >
+          <div
+            className="watermark-overlay pointer-events-none"
+            aria-hidden="true"
+            suppressHydrationWarning
+            style={{
+              backgroundImage: isClient
+                ? `url(${JSON.stringify(watermarkPattern.url)})`
+                : undefined,
+              backgroundSize: isClient
+                ? `${watermarkPattern.width}px ${watermarkPattern.height}px`
+                : undefined
+            }}
+          />
           <div className="relative z-30">
-
             <div className="relative">
               {title && (
-                <div className="text-center text-xl font-bold mb-3">{title}</div>
+                <div className="text-center text-xl font-bold mb-3">
+                  {title}
+                </div>
               )}
 
               {tableData ? (
@@ -178,14 +221,24 @@ export default function Home() {
                     {columnWidths.length === tableData.headers.length && (
                       <colgroup>
                         {tableData.headers.map((_, i) => (
-                          <col key={i} style={{ width: columnWidths[i] ? `${columnWidths[i]}px` : undefined }} />
+                          <col
+                            key={i}
+                            style={{
+                              width: columnWidths[i]
+                                ? `${columnWidths[i]}px`
+                                : undefined
+                            }}
+                          />
                         ))}
                       </colgroup>
                     )}
                     <thead>
                       <tr>
                         {tableData.headers.map((h, i) => (
-                          <th key={i} className="text-center px-3 py-2 relative select-none">
+                          <th
+                            key={i}
+                            className="text-center px-3 py-2 relative select-none"
+                          >
                             {h}
                             <span
                               className="absolute top-0 right-0 h-full w-2 cursor-col-resize"
@@ -218,11 +271,10 @@ export default function Home() {
                   dangerouslySetInnerHTML={{ __html: sanitizedNoteHtml }}
                 />
               )}
-
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

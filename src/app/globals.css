@@ -30,6 +30,14 @@ body {
 .custom-table td {
   border: 1px solid #cfd8e3;
 }
+.custom-table {
+  table-layout: fixed;
+}
+.custom-table th,
+.custom-table td {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 .custom-table thead th {
   background: #5b8bd8;
   color: #ffffff;
@@ -55,7 +63,7 @@ body {
   inset: 0;
   pointer-events: none;
   user-select: none;
-  opacity: 0.2;
+  opacity: 0.1;
   background-repeat: repeat;
   background-size: 120px 90px;
   transform: translateZ(0);
