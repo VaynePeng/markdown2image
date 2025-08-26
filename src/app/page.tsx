@@ -52,7 +52,6 @@ export default function Home() {
     setIsClient(true)
   }, [])
 
-  // 视口宽度（用于水印自适应，仅客户端）
   const [viewportWidth, setViewportWidth] = useState<number>(1024)
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -143,17 +142,75 @@ export default function Home() {
   const exportAsImage = async () => {
     if (!containerRef.current) return
     const node = containerRef.current
+    const cloneNode = node.cloneNode(true) as HTMLDivElement
+    const offscreen = document.createElement('div')
+    offscreen.style.position = 'fixed'
+    offscreen.style.left = '-10000px'
+    offscreen.style.top = '0'
+    offscreen.style.zIndex = '-1'
+    offscreen.style.pointerEvents = 'none'
+    // 覆盖原容器上的 overflow-hidden，避免裁剪
+    cloneNode.style.overflow = 'visible'
+    // 先按原节点尺寸兜底，后续再根据内容修正
+    cloneNode.style.width = `${node.scrollWidth}px`
+    cloneNode.style.height = `${node.scrollHeight}px`
+    offscreen.appendChild(cloneNode)
+    document.body.appendChild(offscreen)
+
+    const tableContainer = cloneNode.querySelector('.table-container') as HTMLElement
+    if (tableContainer) {
+      // 展开滚动容器的真实尺寸，确保全部内容可见
+      const scrollW = tableContainer.scrollWidth
+      const scrollH = tableContainer.scrollHeight
+      tableContainer.style.overflow = 'visible'
+      tableContainer.style.width = `${scrollW}px`
+      tableContainer.style.height = `${scrollH}px`
+
+      // 计算根容器的水平/垂直内边距与边框，确保包含 padding/border
+      const rootStyle = window.getComputedStyle(cloneNode)
+      const paddingX =
+        parseFloat(rootStyle.paddingLeft || '0') +
+        parseFloat(rootStyle.paddingRight || '0')
+      const paddingY =
+        parseFloat(rootStyle.paddingTop || '0') +
+        parseFloat(rootStyle.paddingBottom || '0')
+      const borderX =
+        parseFloat(rootStyle.borderLeftWidth || '0') +
+        parseFloat(rootStyle.borderRightWidth || '0')
+      const borderY =
+        parseFloat(rootStyle.borderTopWidth || '0') +
+        parseFloat(rootStyle.borderBottomWidth || '0')
+
+      // 根据展开后的布局，放大克隆根容器以容纳全部内容（含 padding/border）
+      const neededW = scrollW + paddingX + borderX
+      const neededH = scrollH + paddingY + borderY
+      const totalW = Math.max(cloneNode.scrollWidth, neededW)
+      const totalH = Math.max(cloneNode.scrollHeight, neededH)
+      cloneNode.style.width = `${totalW}px`
+      cloneNode.style.height = `${totalH}px`
+    }
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)))
 
-    const dataUrl = await toPng(node, {
+    // 使用克隆节点的真实边界尺寸（包含 padding 与边框）来导出，避免裁剪
+    const rect = cloneNode.getBoundingClientRect()
+    const exportWidth = Math.ceil(rect.width)
+    const exportHeight = Math.ceil(rect.height)
+
+    const dataUrl = await toPng(cloneNode, {
       pixelRatio: 2,
       cacheBust: true,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      width: exportWidth,
+      height: exportHeight,
+      canvasWidth: exportWidth,
+      canvasHeight: exportHeight
     })
     const link = document.createElement('a')
     link.download = `${title || '表格'}.png`
     link.href = dataUrl
     link.click()
+    // 清理离屏容器
+    document.body.removeChild(offscreen)
   }
 
   const sanitizedNoteHtml = useMemo(() => {
@@ -229,7 +286,7 @@ export default function Home() {
               )}
 
               {tableData ? (
-                <div className="overflow-x-auto">
+                <div className="table-container overflow-x-auto">
                   <table className="w-full border-collapse custom-table">
                     {columnWidths.length === tableData.headers.length && (
                       <colgroup>
