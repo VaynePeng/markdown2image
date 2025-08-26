@@ -69,7 +69,7 @@ export default function Home() {
   const watermarkPattern = useMemo(() => {
     const textRaw =
       watermark && watermark.trim().length > 0 ? watermark : '水果名片'
-    const fontSize = Math.round(clampNumber(viewportWidth * 0.02, 14, 20))
+    const fontSize = Math.round(clampNumber(viewportWidth * 0.02, 14, 18))
     const fontFamily = 'Arial'
     let textWidth = textRaw.length * fontSize * 0.65 // 近似兜底
     if (typeof document !== 'undefined') {
@@ -154,6 +154,7 @@ export default function Home() {
     // 先按原节点尺寸兜底，后续再根据内容修正
     cloneNode.style.width = `${node.scrollWidth}px`
     cloneNode.style.height = `${node.scrollHeight}px`
+    cloneNode.style.borderRadius = '0px'
     offscreen.appendChild(cloneNode)
     document.body.appendChild(offscreen)
 

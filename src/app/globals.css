@@ -63,7 +63,7 @@ body {
   inset: 0;
   pointer-events: none;
   user-select: none;
-  opacity: 0.1;
+  opacity: 0.13;
   background-repeat: repeat;
   background-size: 120px 90px;
   transform: translateZ(0);
