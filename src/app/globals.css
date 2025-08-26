@@ -69,3 +69,42 @@ body {
   transform: translateZ(0);
   z-index: 99;
 }
+
+/* 移动端/平板响应式优化 */
+@media (max-width: 768px) {
+  .custom-table {
+    font-size: 13px;
+  }
+  .custom-table th,
+  .custom-table td {
+    padding: 8px 10px;
+  }
+  /* 增大拖拽手柄触控面积 */
+  .custom-table thead th .col-resizer {
+    width: 10px !important;
+  }
+  .watermark-overlay {
+    opacity: 0.12;
+    background-size: 96px 72px;
+  }
+  input, textarea, button {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .custom-table {
+    font-size: 12px;
+  }
+  .custom-table th,
+  .custom-table td {
+    padding: 6px 8px;
+  }
+  .watermark-overlay {
+    opacity: 0.12;
+    background-size: 84px 64px;
+  }
+  input, textarea, button {
+    font-size: 13px;
+  }
+}

@@ -52,12 +52,25 @@ export default function Home() {
     setIsClient(true)
   }, [])
 
+  // 视口宽度（用于水印自适应，仅客户端）
+  const [viewportWidth, setViewportWidth] = useState<number>(1024)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const update = () => setViewportWidth(window.innerWidth || 1024)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
+  const clampNumber = (value: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, value))
+
   // 动态水印
   const [watermark, setWatermark] = useState('水果名片')
   const watermarkPattern = useMemo(() => {
     const textRaw =
       watermark && watermark.trim().length > 0 ? watermark : '水果名片'
-    const fontSize = 20
+    const fontSize = Math.round(clampNumber(viewportWidth * 0.02, 14, 20))
     const fontFamily = 'Arial'
     let textWidth = textRaw.length * fontSize * 0.65 // 近似兜底
     if (typeof document !== 'undefined') {
@@ -84,7 +97,7 @@ export default function Home() {
       fontFamily
     )}' font-size='${fontSize}' fill='%232b6cb0' fill-opacity='1' transform='rotate(-30 ${cx} ${cy})'%3E${text}%3C/text%3E%3C/svg%3E`
     return { url: svg, width: tileWidth, height: tileHeight }
-  }, [watermark])
+  }, [watermark, viewportWidth])
 
   // 列宽可拖拽
   const [columnWidths, setColumnWidths] = useState<number[]>([])
@@ -241,7 +254,7 @@ export default function Home() {
                           >
                             {h}
                             <span
-                              className="absolute top-0 right-0 h-full w-2 cursor-col-resize"
+                              className="col-resizer absolute top-0 right-0 h-full w-2 cursor-col-resize"
                               onMouseDown={(e) => onResizeMouseDown(i, e)}
                             />
                           </th>
